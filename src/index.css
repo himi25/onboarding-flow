@@ -45,7 +45,7 @@ body {
 
 /* Button base */
 .btn {
-    @apply inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 ease-out;
+    @apply inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 ease-out cursor-pointer;
 }
 
 .btn-primary {

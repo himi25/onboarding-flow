@@ -1,4 +1,7 @@
-import { useAppSelector } from '../app/hooks';
+import { useNavigate } from 'react-router-dom';
+import { useAppSelector, useAppDispatch } from '../app/hooks';
+import { logout } from '../features/auth/authSlice';
+import { useSnackbar } from '../components/Snackbar';
 import { PersonalProfile } from '../components/onboarding/PersonalProfile';
 import { FavoriteSongs } from '../components/onboarding/FavoriteSongs';
 import { PaymentInfo } from '../components/onboarding/PaymentInfo';
@@ -19,11 +22,38 @@ const stepComponents: Record<number, React.ReactNode> = {
 };
 
 export const Onboarding = () => {
+    const dispatch = useAppDispatch();
+    const navigate = useNavigate();
+    const snackbar = useSnackbar();
     const currentStep = useAppSelector((state) => state.onboarding.currentStep);
+
+    const handleLogout = () => {
+        dispatch(logout());
+        snackbar.show('Logged out successfully', 'neutral');
+        navigate('/login');
+    };
 
     return (
         <div className="min-h-screen py-8 px-4 sm:py-12">
             <div className="max-w-xl mx-auto">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <span className="text-sm font-semibold text-slate-700">Onboarding</span>
+                    </div>
+                    <button
+                        onClick={handleLogout}
+                        className="btn btn-secondary px-3 py-1.5 text-xs"
+                    >
+                        Log out
+                    </button>
+                </div>
+
                 {/* Progress Header */}
                 <div className="mb-8">
                     {/* Step counter */}

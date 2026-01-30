@@ -1,18 +1,27 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { login } from '../features/auth/authSlice';
 import { useSnackbar } from '../components/Snackbar';
-import { validateUser, TEST_CREDENTIALS } from '../utils/userStorage';
+import { saveUser, userExists } from '../utils/userStorage';
 
-const loginSchema = Yup.object({
-    username: Yup.string().required('Username is required'),
-    password: Yup.string().required('Password is required'),
+const signupSchema = Yup.object({
+    username: Yup.string()
+        .min(3, 'Username must be at least 3 characters')
+        .max(20, 'Username must be at most 20 characters')
+        .matches(/^[a-zA-Z0-9_]+$/, 'Only letters, numbers, and underscores')
+        .required('Username is required'),
+    password: Yup.string()
+        .min(6, 'Password must be at least 6 characters')
+        .required('Password is required'),
+    confirmPassword: Yup.string()
+        .oneOf([Yup.ref('password')], 'Passwords must match')
+        .required('Please confirm your password'),
 });
 
-export const Login = () => {
+export const Signup = () => {
     const [error, setError] = useState('');
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
@@ -31,31 +40,11 @@ export const Login = () => {
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 shadow-lg shadow-indigo-500/30 mb-4">
                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                         </svg>
                     </div>
-                    <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Welcome back</h1>
-                    <p className="mt-2 text-sm text-slate-500">Sign in to your account</p>
-                </div>
-
-                {/* Test Credentials Box */}
-                <div className="mb-6 p-4 rounded-xl bg-teal-50/70 border border-teal-200">
-                    <div className="flex items-center gap-2 mb-2">
-                        <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="text-sm font-semibold text-teal-700">Demo Credentials</span>
-                    </div>
-                    <div className="space-y-1 text-sm">
-                        <p className="text-teal-700">
-                            <span className="font-medium">Username:</span>{' '}
-                            <code className="px-1.5 py-0.5 bg-teal-100 text-teal-800 rounded font-mono text-xs">{TEST_CREDENTIALS.username}</code>
-                        </p>
-                        <p className="text-teal-700">
-                            <span className="font-medium">Password:</span>{' '}
-                            <code className="px-1.5 py-0.5 bg-teal-100 text-teal-800 rounded font-mono text-xs">{TEST_CREDENTIALS.password}</code>
-                        </p>
-                    </div>
+                    <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Create an account</h1>
+                    <p className="mt-2 text-sm text-slate-500">Get started with your onboarding</p>
                 </div>
 
                 {/* Card */}
@@ -72,17 +61,19 @@ export const Login = () => {
                     )}
 
                     <Formik
-                        initialValues={{ username: '', password: '' }}
-                        validationSchema={loginSchema}
+                        initialValues={{ username: '', password: '', confirmPassword: '' }}
+                        validationSchema={signupSchema}
                         onSubmit={(values) => {
-                            if (validateUser(values.username, values.password)) {
-                                dispatch(login(values.username));
-                                snackbar.show('Signed in successfully', 'success');
-                                navigate('/onboarding');
-                            } else {
-                                setError('Invalid username or password');
-                                snackbar.show('Invalid credentials', 'error');
+                            if (userExists(values.username)) {
+                                setError('Username already taken');
+                                snackbar.show('Username already exists', 'error');
+                                return;
                             }
+
+                            saveUser({ username: values.username, password: values.password });
+                            dispatch(login(values.username));
+                            snackbar.show('Account created successfully', 'success');
+                            navigate('/onboarding');
                         }}
                     >
                         {({ errors, touched, isValid, dirty }) => (
@@ -97,7 +88,7 @@ export const Login = () => {
                                         type="text"
                                         autoComplete="username"
                                         className={`input ${touched.username && errors.username ? 'input-error' : ''}`}
-                                        placeholder="Enter your username"
+                                        placeholder="Choose a username"
                                     />
                                     {touched.username && errors.username && (
                                         <p className="error-text">{errors.username}</p>
@@ -112,12 +103,29 @@ export const Login = () => {
                                         id="password"
                                         name="password"
                                         type="password"
-                                        autoComplete="current-password"
+                                        autoComplete="new-password"
                                         className={`input ${touched.password && errors.password ? 'input-error' : ''}`}
-                                        placeholder="Enter your password"
+                                        placeholder="Create a password"
                                     />
                                     {touched.password && errors.password && (
                                         <p className="error-text">{errors.password}</p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label htmlFor="confirmPassword" className="label">
+                                        Confirm Password
+                                    </label>
+                                    <Field
+                                        id="confirmPassword"
+                                        name="confirmPassword"
+                                        type="password"
+                                        autoComplete="new-password"
+                                        className={`input ${touched.confirmPassword && errors.confirmPassword ? 'input-error' : ''}`}
+                                        placeholder="Confirm your password"
+                                    />
+                                    {touched.confirmPassword && errors.confirmPassword && (
+                                        <p className="error-text">{errors.confirmPassword}</p>
                                     )}
                                 </div>
 
@@ -126,12 +134,20 @@ export const Login = () => {
                                     disabled={!isValid || !dirty}
                                     className="btn btn-primary w-full py-2.5 text-sm"
                                 >
-                                    Sign in
+                                    Create account
                                 </button>
                             </Form>
                         )}
                     </Formik>
                 </div>
+
+                {/* Login link */}
+                <p className="mt-6 text-center text-sm text-slate-500">
+                    Already have an account?{' '}
+                    <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+                        Sign in
+                    </Link>
+                </p>
             </div>
         </div>
     );

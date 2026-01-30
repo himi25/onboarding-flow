@@ -20,6 +20,8 @@ const authSlice = createSlice({
             state.username = action.payload;
         },
         logout(state) {
+            // Session logout only - clears auth state
+            // User data and onboarding progress are preserved in localStorage
             state.isAuthenticated = false;
             state.username = null;
         },

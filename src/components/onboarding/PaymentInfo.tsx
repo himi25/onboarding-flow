@@ -1,3 +1,4 @@
+import type { ChangeEvent } from 'react';
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
@@ -7,17 +8,71 @@ import {
     prevStep,
 } from '../../features/onboarding/onboardingSlice';
 
+// Validate expiry date is in the future
+const validateExpiryDate = (value: string | undefined): boolean => {
+    if (!value) return false;
+    const match = value.match(/^(0[1-9]|1[0-2])\/(\d{2})$/);
+    if (!match) return false;
+
+    const [, monthStr, yearStr] = match;
+    const month = parseInt(monthStr, 10);
+    const year = 2000 + parseInt(yearStr, 10);
+
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    if (year < currentYear) return false;
+    if (year === currentYear && month < currentMonth) return false;
+
+    return true;
+};
+
 const paymentSchema = Yup.object({
     cardNumber: Yup.string()
         .matches(/^\d{16}$/, 'Card number must be 16 digits')
         .required('Card number is required'),
     expiryDate: Yup.string()
         .matches(/^(0[1-9]|1[0-2])\/\d{2}$/, 'Format: MM/YY')
+        .test('future-date', 'Card has expired', validateExpiryDate)
         .required('Expiry date is required'),
     cvv: Yup.string()
         .matches(/^\d{3,4}$/, 'CVV must be 3 or 4 digits')
         .required('CVV is required'),
 });
+
+// Input handlers to restrict typing
+const handleCardNumberInput = (
+    e: ChangeEvent<HTMLInputElement>,
+    setFieldValue: (field: string, value: string) => void
+) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+    setFieldValue('cardNumber', value);
+};
+
+const handleExpiryInput = (
+    e: ChangeEvent<HTMLInputElement>,
+    setFieldValue: (field: string, value: string) => void
+) => {
+    let value = e.target.value.replace(/[^\d/]/g, '');
+
+    // Auto-insert slash after 2 digits
+    if (value.length === 2 && !value.includes('/')) {
+        value = value + '/';
+    }
+
+    // Limit to MM/YY format (5 chars)
+    value = value.slice(0, 5);
+    setFieldValue('expiryDate', value);
+};
+
+const handleCvvInput = (
+    e: ChangeEvent<HTMLInputElement>,
+    setFieldValue: (field: string, value: string) => void
+) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setFieldValue('cvv', value);
+};
 
 export const PaymentInfo = () => {
     const dispatch = useAppDispatch();
@@ -55,7 +110,7 @@ export const PaymentInfo = () => {
                     dispatch(nextStep());
                 }}
             >
-                {({ errors, touched, isValid }) => (
+                {({ errors, touched, isValid, setFieldValue, values }) => (
                     <Form className="space-y-4">
                         <div>
                             <label htmlFor="cardNumber" className="label">Card Number</label>
@@ -63,10 +118,15 @@ export const PaymentInfo = () => {
                                 <Field
                                     id="cardNumber"
                                     name="cardNumber"
-                                    placeholder="1234 5678 9012 3456"
-                                    className={`input pl-11 ${touched.cardNumber && errors.cardNumber ? 'input-error' : ''}`}
+                                    placeholder="1234567890123456"
+                                    value={values.cardNumber}
+                                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleCardNumberInput(e, setFieldValue)}
+                                    inputMode="numeric"
+                                    autoComplete="cc-number"
+                                    className={`input !pl-11 ${touched.cardNumber && errors.cardNumber ? 'input-error' : ''}`}
                                 />
-                                <div className="absolute left-3.5 top-1/2 -translate-y-1/2">
+                                {/* Icon positioned absolutely: left-3 (12px) + w-5 (20px) = 32px. Input !pl-11 (44px) provides 12px gap */}
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
                                     <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                                     </svg>
@@ -84,6 +144,10 @@ export const PaymentInfo = () => {
                                     id="expiryDate"
                                     name="expiryDate"
                                     placeholder="MM/YY"
+                                    value={values.expiryDate}
+                                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleExpiryInput(e, setFieldValue)}
+                                    inputMode="numeric"
+                                    autoComplete="cc-exp"
                                     className={`input ${touched.expiryDate && errors.expiryDate ? 'input-error' : ''}`}
                                 />
                                 {touched.expiryDate && errors.expiryDate && (
@@ -97,6 +161,10 @@ export const PaymentInfo = () => {
                                     name="cvv"
                                     type="password"
                                     placeholder="•••"
+                                    value={values.cvv}
+                                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleCvvInput(e, setFieldValue)}
+                                    inputMode="numeric"
+                                    autoComplete="cc-csc"
                                     className={`input ${touched.cvv && errors.cvv ? 'input-error' : ''}`}
                                 />
                                 {touched.cvv && errors.cvv && (

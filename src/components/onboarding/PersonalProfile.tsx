@@ -18,7 +18,10 @@ const profileSchema = Yup.object({
         .max(120, 'Invalid age')
         .required('Age is required'),
     email: Yup.string()
-        .email('Invalid email address')
+        .matches(
+            /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+            'Please enter a valid email with domain (e.g., user@example.com)'
+        )
         .required('Email is required'),
 });
 

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch } from '../../app/hooks';
 import { completeOnboarding } from '../../features/onboarding/onboardingSlice';
@@ -7,12 +8,23 @@ export const Success = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const snackbar = useSnackbar();
+    const hasRedirected = useRef(false);
 
-    const handleContinue = () => {
+    useEffect(() => {
+        if (hasRedirected.current) return;
+        hasRedirected.current = true;
+
+        // Complete onboarding and show snackbar
         dispatch(completeOnboarding());
-        snackbar.show('Onboarding complete!', 'success');
-        navigate('/home');
-    };
+        snackbar.show('Onboarding completed successfully!', 'success');
+
+        // Auto-redirect after 3 seconds
+        const timer = setTimeout(() => {
+            navigate('/home');
+        }, 3000);
+
+        return () => clearTimeout(timer);
+    }, [dispatch, navigate, snackbar]);
 
     return (
         <div className="py-6 text-center">
@@ -31,7 +43,7 @@ export const Success = () => {
                 <div className="space-y-2">
                     <h2 className="text-2xl font-semibold text-slate-900">You're all set!</h2>
                     <p className="text-slate-500 max-w-xs mx-auto leading-relaxed">
-                        Your profile is complete. Welcome aboard — we're excited to have you.
+                        Your profile is complete. Redirecting to dashboard...
                     </p>
                 </div>
 
@@ -42,12 +54,21 @@ export const Success = () => {
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
                 </div>
 
-                {/* CTA */}
+                {/* Loading indicator */}
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Redirecting in 3 seconds...
+                </div>
+
+                {/* Manual CTA */}
                 <button
-                    onClick={handleContinue}
+                    onClick={() => navigate('/home')}
                     className="btn btn-primary px-8 py-2.5 text-sm mt-2"
                 >
-                    Go to Dashboard
+                    Go to Dashboard Now
                 </button>
             </div>
         </div>
